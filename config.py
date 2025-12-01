@@ -2,11 +2,23 @@ import streamlit as st
 import os
 
 # API Configuration - Add your API keys here
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY_HERE")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-6aAUuLKU6N1Nfm9jfX-hvg")
+
+
+os.environ['API_KEY'] = "sk-nsjrhU0f3oKGYC9VWee1_g"
+os.environ['OPENAI_API_KEY'] = "sk-nsjrhU0f3oKGYC9VWee1_g"
+os.environ['TAVILY_API_KEY'] = "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"
+os.environ['BASE_URL'] = "https://api.ai.it.cornell.edu/"
+os.environ['OPENAI_BASE_URL'] = "https://api.ai.it.cornell.edu/"
+
+from dotenv import load_dotenv
+
+load_dotenv()  # Loads variables from a local .env if present
+
 
 # Model Configuration
-DEFAULT_MODEL = "gpt-4o"
-AGENT_MODEL = "gpt-4o"
+DEFAULT_MODEL = "openai.gpt-4o"
+AGENT_MODEL = "openai.gpt-4o"
 
 # Quiz Configuration
 QUIZ_TYPES = ["Multiple Choice (MCQ)", "Conversational", "Long Answer"]
@@ -59,5 +71,9 @@ def setup_page_config():
 
 def get_openai_client():
     """Get OpenAI client with API key"""
+    API_KEY = "sk-nsjrhU0f3oKGYC9VWee1_g"
+    OPENAI_API_KEY = "sk-nsjrhU0f3oKGYC9VWee1_g"
+    BASE_URL = "https://api.ai.it.cornell.edu/"
+    OPENAI_BASE_URL = "https://api.ai.it.cornell.edu/"
     from openai import OpenAI
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return OpenAI()
