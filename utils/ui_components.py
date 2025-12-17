@@ -2,53 +2,104 @@ import streamlit as st
 from typing import List, Dict, Any
 
 def render_slide_viewer(slides: List[Dict[str, Any]]):
-    """Render slide viewer with navigation"""
+    """Render slide viewer with navigation for slides and pages within PDFs"""
     if not slides:
         st.info("No slides uploaded yet.")
         return
 
+    # Initialize session state for slide and page indices
     if 'current_slide_index' not in st.session_state:
         st.session_state.current_slide_index = 0
 
-    current_index = st.session_state.current_slide_index
+    if 'current_page_index' not in st.session_state:
+        st.session_state.current_page_index = 0
 
-    # Navigation controls
+    current_slide_idx = st.session_state.current_slide_index
+    current_page_idx = st.session_state.current_page_index
+
+    # Get current slide
+    current_slide = slides[current_slide_idx]
+    total_pages = current_slide.get('page_count', 1)
+
+    # Reset page index if it exceeds the current slide's pages
+    if current_page_idx >= total_pages:
+        st.session_state.current_page_index = 0
+        current_page_idx = 0
+
+    # Slide navigation (between different files/slides)
+    st.markdown("### 📁 Document Navigation")
     col1, col2, col3 = st.columns([1, 3, 1])
 
     with col1:
-        if st.button("⬅️ Previous", disabled=(current_index == 0)):
-            st.session_state.current_slide_index = max(0, current_index - 1)
+        if st.button("⬅️ Previous Document", disabled=(current_slide_idx == 0), key="prev_doc"):
+            st.session_state.current_slide_index = max(0, current_slide_idx - 1)
+            st.session_state.current_page_index = 0  # Reset to first page
             st.rerun()
 
     with col2:
-        st.markdown(f"<h4 style='text-align: center;'>Slide {current_index + 1} of {len(slides)}</h4>",
+        st.markdown(f"<h4 style='text-align: center;'>{current_slide['title']}</h4>",
+                    unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: gray;'>Document {current_slide_idx + 1} of {len(slides)}</p>",
                     unsafe_allow_html=True)
 
     with col3:
-        if st.button("Next ➡️", disabled=(current_index == len(slides) - 1)):
-            st.session_state.current_slide_index = min(len(slides) - 1, current_index + 1)
+        if st.button("Next Document ➡️", disabled=(current_slide_idx == len(slides) - 1), key="next_doc"):
+            st.session_state.current_slide_index = min(len(slides) - 1, current_slide_idx + 1)
+            st.session_state.current_page_index = 0  # Reset to first page
             st.rerun()
 
-    # Display current slide
     st.divider()
-    current_slide = slides[current_index]
 
-    st.markdown(f"### {current_slide['title']}")
+    # Page navigation (within current PDF/slide if multi-page)
+    if total_pages > 1:
+        st.markdown("### 📄 Page Navigation")
+        col1, col2, col3 = st.columns([1, 3, 1])
 
-    # Display slide image
-    if current_slide.get('file') and current_slide.get('file_type') == 'image':
+        with col1:
+            if st.button("⬅️ Previous Page", disabled=(current_page_idx == 0), key="prev_page"):
+                st.session_state.current_page_index = max(0, current_page_idx - 1)
+                st.rerun()
+
+        with col2:
+            st.markdown(f"<h5 style='text-align: center;'>Page {current_page_idx + 1} of {total_pages}</h5>",
+                        unsafe_allow_html=True)
+
+        with col3:
+            if st.button("Next Page ➡️", disabled=(current_page_idx == total_pages - 1), key="next_page"):
+                st.session_state.current_page_index = min(total_pages - 1, current_page_idx + 1)
+                st.rerun()
+
+        # Optional: Page selector dropdown for quick navigation
+        selected_page = st.selectbox(
+            "Jump to page:",
+            range(total_pages),
+            index=current_page_idx,
+            format_func=lambda x: f"Page {x + 1}",
+            key="page_selector"
+        )
+
+        if selected_page != current_page_idx:
+            st.session_state.current_page_index = selected_page
+            st.rerun()
+
+        st.divider()
+
+    # Display current page
+    if current_slide.get('pages'):
         try:
-            st.image(current_slide['file'], use_column_width=True)
+            # Get the current page image
+            page_image = current_slide['pages'][current_page_idx]
+            st.image(page_image, use_column_width=True)
         except Exception as e:
-            st.error(f"Error displaying slide: {str(e)}")
-            st.info("The slide file may be corrupted or in an unsupported format.")
+            st.error(f"Error displaying page: {str(e)}")
+            st.info("The file may be corrupted or in an unsupported format.")
     else:
-        st.info("Slide preview not available")
+        st.info("Content not available for this slide.")
 
-    # Display content if available
-    if current_slide.get('content'):
-        with st.expander("📝 Slide Content/Notes"):
-            st.markdown(current_slide['content'])
+    # Display content/notes if available (show for first page or all pages)
+    if current_slide.get('content') and current_page_idx == 0:
+        with st.expander("📝 Document Content/Notes"):
+            st.markdown(current_slide['content'][:1000] + "..." if len(current_slide.get('content', '')) > 1000 else current_slide.get('content', ''))
 
 def render_quiz_card(quiz: Dict[str, Any], show_actions: bool = False):
     """Render a quiz card"""

@@ -69,23 +69,23 @@ def render_slides_management(course_name: str):
 
                         # Check if PDF
                         if is_pdf(file_bytes) or file_type == 'application/pdf':
-                            # Convert PDF to images
+                            # Convert PDF to images and extract text
                             try:
                                 images = pdf_to_images(file_bytes)
                                 text_content = extract_text_from_pdf(file_bytes)
 
                                 if images:
-                                    # Create a slide for each PDF page
-                                    for page_idx, img_bytes in enumerate(images):
-                                        slides.append({
-                                            'id': f"slide_{current_slide_count + len(slides)}",
-                                            'title': f"{file.name} - Page {page_idx + 1}",
-                                            'file': img_bytes,
-                                            'file_type': 'image',
-                                            'order': current_slide_count + len(slides),
-                                            'content': text_content if page_idx == 0 else f"Page {page_idx + 1} content",
-                                            'original_filename': file.name
-                                        })
+                                    # Store PDF as single slide with multiple pages
+                                    slides.append({
+                                        'id': f"slide_{current_slide_count + len(slides)}",
+                                        'title': file.name,
+                                        'file_type': 'pdf',
+                                        'pages': images,  # List of image bytes for each page
+                                        'page_count': len(images),
+                                        'order': current_slide_count + len(slides),
+                                        'content': text_content,
+                                        'original_filename': file.name
+                                    })
                                 else:
                                     st.warning(f"⚠️ Could not process PDF: {file.name}")
                             except Exception as e:
@@ -96,10 +96,11 @@ def render_slides_management(course_name: str):
                             slides.append({
                                 'id': f"slide_{current_slide_count + len(slides)}",
                                 'title': file.name,
-                                'file': file_bytes,
                                 'file_type': 'image',
+                                'pages': [file_bytes],  # Single page for images
+                                'page_count': 1,
                                 'order': current_slide_count + len(slides),
-                                'content': f"Slide: {file.name}",
+                                'content': f"Image: {file.name}",
                                 'original_filename': file.name
                             })
                         else:
@@ -107,7 +108,7 @@ def render_slides_management(course_name: str):
 
                 if slides:
                     save_slides(course_name, slides)
-                    st.success(f"✅ Uploaded {len(slides)} slides!")
+                    st.success(f"✅ Uploaded {len(slides)} slide(s)!")
                     st.rerun()
                 else:
                     st.error("❌ No valid slides to upload!")
@@ -120,21 +121,25 @@ def render_slides_management(course_name: str):
     existing_slides = get_slides(course_name)
 
     if existing_slides:
-        st.info(f"📚 Total slides: {len(existing_slides)}")
+        st.info(f"📚 Total slide sets: {len(existing_slides)}")
 
         for idx, slide in enumerate(existing_slides):
             col1, col2, col3 = st.columns([3, 1, 1])
 
             with col1:
-                st.markdown(f"**{idx + 1}.** {slide['title']}")
+                page_info = f" ({slide['page_count']} pages)" if slide.get('page_count', 1) > 1 else ""
+                st.markdown(f"**{idx + 1}.** {slide['title']}{page_info}")
 
             with col2:
                 with st.expander("Preview"):
-                    if slide.get('file') and slide.get('file_type') == 'image':
+                    if slide.get('pages'):
                         try:
-                            st.image(slide['file'], use_column_width=True)
+                            # Show first page as preview
+                            st.image(slide['pages'][0], use_column_width=True)
+                            if slide.get('page_count', 1) > 1:
+                                st.caption(f"Showing page 1 of {slide['page_count']}")
                         except Exception as e:
-                            st.error(f"Error displaying slide: {str(e)}")
+                            st.error(f"Error displaying preview: {str(e)}")
                     else:
                         st.info("Preview not available")
 
@@ -203,10 +208,15 @@ def render_ai_quiz_creation(course_name: str):
     # Select slides to include
     st.subheader("Select Slides for Quiz")
 
+    slide_options = [
+        f"{idx + 1}. {slide['title']}" + (f" ({slide['page_count']} pages)" if slide.get('page_count', 1) > 1 else "")
+        for idx, slide in enumerate(slides)
+    ]
+
     selected_slide_indices = st.multiselect(
-        "Choose slides to base the quiz on:",
+        "Choose slides/documents to base the quiz on:",
         range(len(slides)),
-        format_func=lambda x: f"Slide {x + 1}: {slides[x]['title']}",
+        format_func=lambda x: slide_options[x],
         default=list(range(min(3, len(slides))))
     )
 
