@@ -6,40 +6,49 @@ def render_slide_viewer(slides: List[Dict[str, Any]]):
     if not slides:
         st.info("No slides uploaded yet.")
         return
-    
+
     if 'current_slide_index' not in st.session_state:
         st.session_state.current_slide_index = 0
-    
+
     current_index = st.session_state.current_slide_index
-    
+
     # Navigation controls
     col1, col2, col3 = st.columns([1, 3, 1])
-    
+
     with col1:
         if st.button("⬅️ Previous", disabled=(current_index == 0)):
             st.session_state.current_slide_index = max(0, current_index - 1)
             st.rerun()
-    
+
     with col2:
-        st.markdown(f"<h4 style='text-align: center;'>Slide {current_index + 1} of {len(slides)}</h4>", 
-                   unsafe_allow_html=True)
-    
+        st.markdown(f"<h4 style='text-align: center;'>Slide {current_index + 1} of {len(slides)}</h4>",
+                    unsafe_allow_html=True)
+
     with col3:
         if st.button("Next ➡️", disabled=(current_index == len(slides) - 1)):
             st.session_state.current_slide_index = min(len(slides) - 1, current_index + 1)
             st.rerun()
-    
+
     # Display current slide
     st.divider()
     current_slide = slides[current_index]
-    
+
     st.markdown(f"### {current_slide['title']}")
-    
-    if current_slide.get('file'):
-        st.image(current_slide['file'], use_column_width=True)
-    
+
+    # Display slide image
+    if current_slide.get('file') and current_slide.get('file_type') == 'image':
+        try:
+            st.image(current_slide['file'], use_column_width=True)
+        except Exception as e:
+            st.error(f"Error displaying slide: {str(e)}")
+            st.info("The slide file may be corrupted or in an unsupported format.")
+    else:
+        st.info("Slide preview not available")
+
+    # Display content if available
     if current_slide.get('content'):
-        st.markdown(current_slide['content'])
+        with st.expander("📝 Slide Content/Notes"):
+            st.markdown(current_slide['content'])
 
 def render_quiz_card(quiz: Dict[str, Any], show_actions: bool = False):
     """Render a quiz card"""
@@ -51,7 +60,7 @@ def render_quiz_card(quiz: Dict[str, Any], show_actions: bool = False):
             <p><strong>Created:</strong> {quiz.get('created_at', 'N/A')}</p>
         </div>
     """, unsafe_allow_html=True)
-    
+
     if show_actions:
         col1, col2 = st.columns(2)
         with col1:
@@ -65,7 +74,7 @@ def render_quiz_card(quiz: Dict[str, Any], show_actions: bool = False):
 def render_progress_indicator(score: float, label: str = "Score"):
     """Render a progress indicator with score"""
     color = "#4CAF50" if score >= 70 else "#FFC107" if score >= 50 else "#F44336"
-    
+
     st.markdown(f"""
         <div style="background-color: #f0f0f0; border-radius: 10px; padding: 10px; margin: 10px 0;">
             <p style="margin: 0; font-weight: bold;">{label}</p>
@@ -83,7 +92,7 @@ def render_chat_interface(messages: List[Dict[str, str]], key_prefix: str = "cha
     for idx, message in enumerate(messages):
         role = message['role']
         content = message['content']
-        
+
         if role == 'user':
             st.markdown(f"""
                 <div style="background-color: #E3F2FD; padding: 10px; border-radius: 10px; 

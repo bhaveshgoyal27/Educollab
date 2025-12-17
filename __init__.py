@@ -20,6 +20,15 @@ from .ui_components import (
     render_chat_interface
 )
 
+from .pdf_handler import (
+    pdf_to_images,
+    is_pdf,
+    is_image,
+    extract_text_from_pdf,
+    get_pdf_page_count,
+    pdf_to_base64
+)
+
 __all__ = [
     'initialize_storage',
     'save_slides',
@@ -33,7 +42,13 @@ __all__ = [
     'render_slide_viewer',
     'render_quiz_card',
     'render_progress_indicator',
-    'render_chat_interface'
+    'render_chat_interface',
+    'pdf_to_images',
+    'is_pdf',
+    'is_image',
+    'extract_text_from_pdf',
+    'get_pdf_page_count',
+    'pdf_to_base64'
 ]
 
 
